@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Floor Plan Creator</title>
+    <link rel="stylesheet" href="style.css">
+    </head>
+<body>
+    <header>
+        <div class="logo">FloorPlan Creator</div>
+        <div class="header-controls">
+            <button id="undo-btn" class="header-btn" style="background: #7f8c8d;">Undo</button>
+            <button id="redo-btn" class="header-btn" style="background: #7f8c8d;">Redo</button>
+            <button id="save-btn" class="header-btn" style="background: #1abc9c;">Save</button>
+            <button id="clear-btn" class="header-btn" style="background: #e74c3c;">Clear</button>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <div class="toolbar">
+            <div class="tool active" data-tool="select">↖️</div>
+            <div class="tool" data-tool="wall">🧱</div>
+            <div class="tool" data-tool="rectangle">⬜</div>
+            <div class="tool" data-tool="circle">⭕</div>
+            <div class="tool" data-tool="door">🚪</div>
+            <div class="tool" data-tool="window">🪟</div>
+            <div class="tool" data-tool="text">T</div>
+            <div class="tool" data-tool="measure">📏</div>
+            <div class="tool" data-tool="erase">🧹</div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="drawing-canvas"></canvas>
+            
+            <div class="text-input-container" id="text-input-container">
+                <input type="text" id="text-input" placeholder="Enter text">
+                <button id="add-text-btn">Add</button>
+            </div>
+            
+            <div class="zoom-controls">
+                <div class="zoom-btn" id="zoom-in">+</div>
+                <div class="zoom-btn" id="zoom-out">-</div>
+                <div class="zoom-btn" id="reset-view">⟳</div>
+            </div>
+            
+            <div class="selection-box" id="selection-box" style="display: none;"></div>
+            <div class="rotation-handle" id="rotation-handle" style="display: none;"></div>
+            <div class="move-handle" id="move-handle" style="display: none;"></div>
+        </div>
+        
+        <div class="properties-panel">
+            <h3>Properties</h3>
+            
+            <div class="property-group">
+                <label for="line-width">Line Width</label>
+                <input type="range" id="line-width" min="1" max="10" value="2">
+            </div>
+            
+            <div class="property-group">
+                <label for="line-color">Line Color</label>
+                <input type="color" id="line-color" value="#000000">
+            </div>
+            
+            <div class="property-group">
+                <label for="fill-color">Fill Color</label>
+                <input type="color" id="fill-color" value="#ffffff">
+            </div>
+            
+            <div class="property-group">
+                <label for="opacity">Opacity</label>
+                <input type="range" id="opacity" min="0" max="100" value="100">
+            </div>
+            
+            <div class="property-group">
+                <label for="font-size">Font Size</label>
+                <input type="range" id="font-size" min="12" max="72" value="24">
+            </div>
+            
+            <div class="property-group">
+                <label for="rotation">Rotation</label>
+                <input type="range" id="rotation" min="0" max="360" value="0">
+            </div>
+            
+            <div class="property-group">
+                <label for="show-labels">Show Labels</label>
+                <input type="checkbox" id="show-labels" checked>
+            </div>
+            
+            <div class="property-group">
+                <h4>Selected Object</h4>
+                <div id="selected-info">
+                    <p>No object selected</p>
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <h4>Recent Plans</h4>
+                <div id="recent-plans">
+                    <p>No recent plans</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div id="cursor-position">X: 0, Y: 0</div>
+        <div id="current-tool">Current Tool: Select</div>
+        <div id="canvas-scale">Scale: 100%</div>
+    </div>
+  <script src="script.js"></script>
+    </body>
+</html>

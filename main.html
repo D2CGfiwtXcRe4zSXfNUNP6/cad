@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Floor Plan Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f5f5f7;
+            overflow: hidden;
+        }
+        
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .header-btn {
+            padding: 8px 15px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .toolbar {
+            width: 70px;
+            background-color: #34495e;
+            padding: 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .tool {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background-color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tool.active {
+            background-color: #1abc9c;
+            transform: scale(1.1);
+        }
+        
+        .tool:hover {
+            background-color: #1abc9c;
+        }
+        
+        .properties-panel {
+            width: 250px;
+            background-color: white;
+            border-left: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .properties-panel h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .property-group {
+            margin-bottom: 20px;
+        }
+        
+        .property-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .property-group input,
+        .property-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: #ecf0f1;
+            touch-action: none;
+        }
+        
+        #drawing-canvas {
+            position: absolute;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            cursor: crosshair;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
+        .status-bar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        
+        .text-input-container {
+            position: absolute;
+            display: none;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        
+        .text-input-container input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        
+        .text-input-container button {
+            padding: 8px 12px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .rotation-handle {
+            width: 12px;
+            height: 12px;
+            background-color: #1abc9c;
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            cursor: grab;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        
+        .move-handle {
+            width: 12px;
+            height: 12px;
+            background-color: #3498db;
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            cursor: move;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        
+        .selection-box {
+            position: absolute;
+            border: 2px dashed #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .object-label {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            pointer-events: none;
+            z-index: 2;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            white-space: nowrap;
+            transform: translate(-50%, -50%);
+        }
+        
+        @media (max-width: 768px) {
+            .toolbar {
+                width: 60px;
+            }
+            
+            .properties-panel {
+                width: 200px;
+            }
+            
+            .tool {
+                width: 45px;
+                height: 45px;
+            }
+            
+            .object-label {
+                font-size: 9px;
+                padding: 1px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">FloorPlan Creator</div>
+        <div class="header-controls">
+            <button id="undo-btn" class="header-btn" style="background: #7f8c8d;">Undo</button>
+            <button id="redo-btn" class="header-btn" style="background: #7f8c8d;">Redo</button>
+            <button id="save-btn" class="header-btn" style="background: #1abc9c;">Save</button>
+            <button id="clear-btn" class="header-btn" style="background: #e74c3c;">Clear</button>
+        </div>
+    </header>
+    
+    <div class="main-container">
+        <div class="toolbar">
+            <div class="tool active" data-tool="select">↖️</div>
+            <div class="tool" data-tool="wall">🧱</div>
+            <div class="tool" data-tool="rectangle">⬜</div>
+            <div class="tool" data-tool="circle">⭕</div>
+            <div class="tool" data-tool="door">🚪</div>
+            <div class="tool" data-tool="window">🪟</div>
+            <div class="tool" data-tool="text">T</div>
+            <div class="tool" data-tool="measure">📏</div>
+            <div class="tool" data-tool="erase">🧹</div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="drawing-canvas"></canvas>
+            
+            <div class="text-input-container" id="text-input-container">
+                <input type="text" id="text-input" placeholder="Enter text">
+                <button id="add-text-btn">Add</button>
+            </div>
+            
+            <div class="zoom-controls">
+                <div class="zoom-btn" id="zoom-in">+</div>
+                <div class="zoom-btn" id="zoom-out">-</div>
+                <div class="zoom-btn" id="reset-view">⟳</div>
+            </div>
+            
+            <div class="selection-box" id="selection-box" style="display: none;"></div>
+            <div class="rotation-handle" id="rotation-handle" style="display: none;"></div>
+            <div class="move-handle" id="move-handle" style="display: none;"></div>
+        </div>
+        
+        <div class="properties-panel">
+            <h3>Properties</h3>
+            
+            <div class="property-group">
+                <label for="line-width">Line Width</label>
+                <input type="range" id="line-width" min="1" max="10" value="2">
+            </div>
+            
+            <div class="property-group">
+                <label for="line-color">Line Color</label>
+                <input type="color" id="line-color" value="#000000">
+            </div>
+            
+            <div class="property-group">
+                <label for="fill-color">Fill Color</label>
+                <input type="color" id="fill-color" value="#ffffff">
+            </div>
+            
+            <div class="property-group">
+                <label for="opacity">Opacity</label>
+                <input type="range" id="opacity" min="0" max="100" value="100">
+            </div>
+            
+            <div class="property-group">
+                <label for="font-size">Font Size</label>
+                <input type="range" id="font-size" min="12" max="72" value="24">
+            </div>
+            
+            <div class="property-group">
+                <label for="rotation">Rotation</label>
+                <input type="range" id="rotation" min="0" max="360" value="0">
+            </div>
+            
+            <div class="property-group">
+                <label for="show-labels">Show Labels</label>
+                <input type="checkbox" id="show-labels" checked>
+            </div>
+            
+            <div class="property-group">
+                <h4>Selected Object</h4>
+                <div id="selected-info">
+                    <p>No object selected</p>
+                </div>
+            </div>
+            
+            <div class="property-group">
+                <h4>Recent Plans</h4>
+                <div id="recent-plans">
+                    <p>No recent plans</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div id="cursor-position">X: 0, Y: 0</div>
+        <div id="current-tool">Current Tool: Select</div>
+        <div id="canvas-scale">Scale: 100%</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('drawing-canvas');
+            const ctx = canvas.getContext('2d');
+            const tools = document.querySelectorAll('.tool');
+            const cursorPosition = document.getElementById('cursor-position');
+            const currentTool = document.getElementById('current-tool');
+            const canvasScale = document.getElementById('canvas-scale');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const resetViewBtn = document.getElementById('reset-view');
+            const saveBtn = document.getElementById('save-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const undoBtn = document.getElementById('undo-btn');
+            const redoBtn = document.getElementById('redo-btn');
+            const textInputContainer = document.getElementById('text-input-container');
+            const textInput = document.getElementById('text-input');
+            const addTextBtn = document.getElementById('add-text-btn');
+            const selectionBox = document.getElementById('selection-box');
+            const rotationHandle = document.getElementById('rotation-handle');
+            const moveHandle = document.getElementById('move-handle');
+            const rotationInput = document.getElementById('rotation');
+            const showLabelsCheckbox = document.getElementById('show-labels');
+            
+            // Canvas setup
+            let scale = 1;
+            let offsetX = 0;
+            let offsetY = 0;
+            let isDrawing = false;
+            let isMoving = false;
+            let isRotating = false;
+            let lastX = 0;
+            let lastY = 0;
+            let selectedTool = 'select';
+            let currentShape = null;
+            let shapes = [];
+            let history = [];
+            let historyIndex = -1;
+            let selectedShape = null;
+            let textPosition = { x: 0, y: 0 };
+            let moveOffset = { x: 0, y: 0 };
+            let showLabels = true;
+            
+            // Initialize canvas size
+            function initCanvas() {
+                const container = document.querySelector('.canvas-container');
+                canvas.width = container.offsetWidth;
+                canvas.height = container.offsetHeight;
+                
+                // Set a neutral background with grid pattern
+                drawBackground();
+                redrawShapes();
+            }
+            
+            // Save state to history
+            function saveState() {
+                // Remove any future states if we're not at the end of history
+                if (historyIndex < history.length - 1) {
+                    history = history.slice(0, historyIndex + 1);
+                }
+                
+                history.push(JSON.stringify(shapes));
+                historyIndex = history.length - 1;
+                
+                updateUndoRedoButtons();
+            }
+            
+            // Update undo/redo buttons state
+            function updateUndoRedoButtons() {
+                undoBtn.disabled = historyIndex <= 0;
+                redoBtn.disabled = historyIndex >= history.length - 1;
+            }
+            
+            // Undo action
+            function undo() {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    shapes = JSON.parse(history[historyIndex]);
+                    redrawShapes();
+                    updateUndoRedoButtons();
+                }
+            }
+            
+            // Redo action
+            function redo() {
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    shapes = JSON.parse(history[historyIndex]);
+                    redrawShapes();
+                    updateUndoRedoButtons();
+                }
+            }
+            
+            // Draw grid background
+            function drawBackground() {
+                const patternSize = 20 * scale;
+                const patternCanvas = document.createElement('canvas');
+                const patternCtx = patternCanvas.getContext('2d');
+                
+                patternCanvas.width = patternSize;
+                patternCanvas.height = patternSize;
+                
+                patternCtx.strokeStyle = '#e0e0e0';
+                patternCtx.lineWidth = 1;
+                patternCtx.beginPath();
+                patternCtx.moveTo(0, patternSize);
+                patternCtx.lineTo(patternSize, patternSize);
+                patternCtx.lineTo(patternSize, 0);
+                patternCtx.stroke();
+                
+                const bgPattern = ctx.createPattern(patternCanvas, 'repeat');
+                ctx.fillStyle = bgPattern;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // Redraw all shapes
+            function redrawShapes() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawBackground();
+                
+                // Remove any existing labels
+                document.querySelectorAll('.object-label').forEach(label => label.remove());
+                
+                shapes.forEach(shape => {
+                    drawShape(shape);
+                    
+                    // Add label if enabled
+                    if (showLabels) {
+                        addLabelToShape(shape);
+                    }
+                });
+                
+                if (currentShape) {
+                    drawShape(currentShape);
+                    
+                    // Add label if enabled
+                    if (showLabels) {
+                        addLabelToShape(currentShape);
+                    }
+                }
+                
+                // Draw selection box if a shape is selected
+                if (selectedShape) {
+                    const index = shapes.indexOf(selectedShape);
+                    if (index !== -1) {
+                        drawSelectionBox(selectedShape);
+                    } else {
+                        selectedShape = null;
+                    }
+                }
+            }
+            
+            // Draw a single shape
+            function drawShape(shape) {
+                ctx.save();
+                
+                // Apply rotation if needed
+                if (shape.rotation && shape.rotation !== 0) {
+                    const centerX = shape.startX + (shape.width || 0) / 2;
+                    const centerY = shape.startY + (shape.height || 0) / 2;
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(shape.rotation * Math.PI / 180);
+                    ctx.translate(-centerX, -centerY);
+                }
+                
+                ctx.lineWidth = shape.lineWidth;
+                ctx.strokeStyle = shape.strokeStyle;
+                ctx.fillStyle = shape.fillStyle;
+                ctx.globalAlpha = shape.opacity;
+                
+                switch(shape.type) {
+                    case 'wall':
+                        ctx.beginPath();
+                        ctx.moveTo(shape.startX, shape.startY);
+                        ctx.lineTo(shape.endX, shape.endY);
+                        ctx.stroke();
+                        break;
+                    case 'rectangle':
+                        ctx.fillRect(shape.startX, shape.startY, shape.width, shape.height);
+                        ctx.strokeRect(shape.startX, shape.startY, shape.width, shape.height);
+                        break;
+                    case 'circle':
+                        const radius = Math.sqrt(Math.pow(shape.width, 2) + Math.pow(shape.height, 2));
+                        ctx.beginPath();
+                        ctx.arc(shape.startX + shape.width/2, shape.startY + shape.height/2, radius/2, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+                    case 'door':
+                        drawDoor(shape);
+                        break;
+                    case 'window':
+                        drawWindow(shape);
+                        break;
+                    case 'text':
+                        drawText(shape);
+                        break;
+                }
+                
+                ctx.restore();
+            }
+            
+            // Add label to a shape
+            function addLabelToShape(shape) {
+                let labelText = '';
+                let centerX, centerY;
+                
+                switch(shape.type) {
+                    case 'wall':
+                        labelText = 'Wall';
+                        centerX = (shape.startX + shape.endX) / 2;
+                        centerY = (shape.startY + shape.endY) / 2;
+                        break;
+                    case 'rectangle':
+                        labelText = 'Rectangle';
+                        centerX = shape.startX + shape.width / 2;
+                        centerY = shape.startY + shape.height / 2;
+                        break;
+                    case 'circle':
+                        labelText = 'Circle';
+                        centerX = shape.startX + shape.width / 2;
+                        centerY = shape.startY + shape.height / 2;
+                        break;
+                    case 'door':
+                        labelText = 'Door';
+                        centerX = shape.startX + shape.width / 2;
+                        centerY = shape.startY + shape.height / 2;
+                        break;
+                    case 'window':
+                        labelText = 'Window';
+                        centerX = shape.startX + shape.width / 2;
+                        centerY = shape.startY + shape.height / 2;
+                        break;
+                    case 'text':
+                        labelText = shape.text;
+                        centerX = shape.startX;
+                        centerY = shape.startY;
+                        break;
+                    default:
+                        return;
+                }
+                
+                // Create and position the label
+                const label = document.createElement('div');
+                label.className = 'object-label';
+                label.textContent = labelText;
+                label.style.left = `${centerX + offsetX}px`;
+                label.style.top = `${centerY + offsetY}px`;
+                
+                document.querySelector('.canvas-container').appendChild(label);
+            }
+            
+            // Draw a door symbol
+            function drawDoor(shape) {
+                const width = shape.width;
+                const height = shape.height;
+                
+                // Draw door rectangle
+                ctx.fillRect(shape.startX, shape.startY, width, height);
+                ctx.strokeRect(shape.startX, shape.startY, width, height);
+                
+                // Draw door arc
+                ctx.beginPath();
+                ctx.arc(shape.startX, shape.startY + height/2, Math.abs(width), Math.PI * 0.5, Math.PI * 1.5, width < 0);
+                ctx.stroke();
+            }
+            
+            // Draw a window symbol
+            function drawWindow(shape) {
+                const width = shape.width;
+                const height = shape.height;
+                
+                // Draw window rectangle
+                ctx.strokeRect(shape.startX, shape.startY, width, height);
+                
+                // Draw window panes
+                const paneCount = 2;
+                for (let i = 1; i < paneCount; i++) {
+                    // Horizontal panes
+                    ctx.beginPath();
+                    ctx.moveTo(shape.startX, shape.startY + height * i/paneCount);
+                    ctx.lineTo(shape.startX + width, shape.startY + height * i/paneCount);
+                    ctx.stroke();
+                    
+                    // Vertical panes
+                    ctx.beginPath();
+                    ctx.moveTo(shape.startX + width * i/paneCount, shape.startY);
+                    ctx.lineTo(shape.startX + width * i/paneCount, shape.startY + height);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw text
+            function drawText(shape) {
+                ctx.font = `${shape.fontSize}px Arial`;
+                ctx.fillStyle = shape.strokeStyle;
+                ctx.fillText(shape.text, shape.startX, shape.startY);
+            }
+            
+            // Draw selection box around a shape
+            function drawSelectionBox(shape) {
+                const padding = 5;
+                let x, y, width, height;
+                
+                if (shape.type === 'wall') {
+                    x = Math.min(shape.startX, shape.endX) - padding;
+                    y = Math.min(shape.startY, shape.endY) - padding;
+                    width = Math.abs(shape.endX - shape.startX) + padding * 2;
+                    height = Math.abs(shape.endY - shape.startY) + padding * 2;
+                } else {
+                    x = shape.startX - padding;
+                    y = shape.startY - padding;
+                    width = (shape.width || 0) + padding * 2;
+                    height = (shape.height || 0) + padding * 2;
+                }
+                
+                selectionBox.style.display = 'block';
+                selectionBox.style.left = `${x + offsetX}px`;
+                selectionBox.style.top = `${y + offsetY}px`;
+                selectionBox.style.width = `${width}px`;
+                selectionBox.style.height = `${height}px`;
+                
+                // Position rotation handle
+                rotationHandle.style.display = 'block';
+                rotationHandle.style.left = `${x + width/2 + offsetX}px`;
+                rotationHandle.style.top = `${y - 20 + offsetY}px`;
+                
+                // Position move handle
+                moveHandle.style.display = 'block';
+                moveHandle.style.left = `${x + width/2 + offsetX}px`;
+                moveHandle.style.top = `${y + height + 10 + offsetY}px`;
+            }
+            
+            // Check if a point is inside a shape
+            function isPointInShape(x, y, shape) {
+                switch(shape.type) {
+                    case 'wall':
+                        // Simplified point-line distance check
+                        const dx = shape.endX - shape.startX;
+                        const dy = shape.endY - shape.startY;
+                        const length = Math.sqrt(dx * dx + dy * dy);
+                        const distance = Math.abs((dy * x - dx * y + shape.endX * shape.startY - shape.endY * shape.startX) / length);
+                        return distance < 5; // 5px threshold
+                    
+                    case 'rectangle':
+                        return x >= shape.startX && x <= shape.startX + shape.width &&
+                               y >= shape.startY && y <= shape.startY + shape.height;
+                    
+                    case 'circle':
+                        const centerX = shape.startX + shape.width/2;
+                        const centerY = shape.startY + shape.height/2;
+                        const radius = Math.sqrt(Math.pow(shape.width, 2) + Math.pow(shape.height, 2)) / 2;
+                        return Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)) <= radius;
+                    
+                    case 'door':
+                    case 'window':
+                        return x >= shape.startX && x <= shape.startX + shape.width &&
+                               y >= shape.startY && y <= shape.startY + shape.height;
+                    
+                    case 'text':
+                        // Approximate text bounding box
+                        ctx.font = `${shape.fontSize}px Arial`;
+                        const textWidth = ctx.measureText(shape.text).width;
+                        return x >= shape.startX && x <= shape.startX + textWidth &&
+                               y <= shape.startY && y >= shape.startY - shape.fontSize;
+                    
+                    default:
+                        return false;
+                }
+            }
+            
+            // Tool selection
+            tools.forEach(tool => {
+                tool.addEventListener('click', () => {
+                    tools.forEach(t => t.classList.remove('active'));
+                    tool.classList.add('active');
+                    selectedTool = tool.dataset.tool;
+                    currentTool.textContent = `Current Tool: ${selectedTool.charAt(0).toUpperCase() + selectedTool.slice(1)}`;
+                    
+                    // Clear selection when switching tools
+                    if (selectedTool !== 'select') {
+                        selectedShape = null;
+                        selectionBox.style.display = 'none';
+                        rotationHandle.style.display = 'none';
+                        moveHandle.style.display = 'none';
+                    }
+                    
+                    // Change cursor based on tool
+                    switch(selectedTool) {
+                        case 'select':
+                            canvas.style.cursor = 'default';
+                            break;
+                        case 'wall':
+                        case 'rectangle':
+                        case 'circle':
+                        case 'door':
+                        case 'window':
+                            canvas.style.cursor = 'crosshair';
+                            break;
+                        case 'erase':
+                            canvas.style.cursor = 'not-allowed';
+                            break;
+                        case 'text':
+                            canvas.style.cursor = 'text';
+                            break;
+                        default:
+                            canvas.style.cursor = 'pointer';
+                    }
+                });
+            });
+            
+            // Show labels checkbox
+            showLabelsCheckbox.addEventListener('change', function() {
+                showLabels = this.checked;
+                redrawShapes();
+            });
+            
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Rotation and move handle events
+            rotationHandle.addEventListener('mousedown', startRotating);
+            moveHandle.addEventListener('mousedown', startMoving);
+            
+            // Touch events for iPad
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd);
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            function startDrawing(e) {
+                isDrawing = true;
+                
+                // Get current mouse position relative to canvas
+                const rect = canvas.getBoundingClientRect();
+                lastX = (e.clientX - rect.left - offsetX) / scale;
+                lastY = (e.clientY - rect.top - offsetY) / scale;
+                
+                if (selectedTool === 'text') {
+                    textPosition = { x: lastX, y: lastY };
+                    textInputContainer.style.display = 'flex';
+                    textInputContainer.style.left = `${e.clientX}px`;
+                    textInputContainer.style.top = `${e.clientY}px`;
+                    textInput.focus();
+                    isDrawing = false;
+                    return;
+                }
+                
+                if (selectedTool === 'select') {
+                    // Check if we're clicking on a shape
+                    selectedShape = null;
+                    selectionBox.style.display = 'none';
+                    rotationHandle.style.display = 'none';
+                    moveHandle.style.display = 'none';
+                    
+                    for (let i = shapes.length - 1; i >= 0; i--) {
+                        if (isPointInShape(lastX, lastY, shapes[i])) {
+                            selectedShape = shapes[i];
+                            drawSelectionBox(selectedShape);
+                            rotationInput.value = selectedShape.rotation || 0;
+                            
+                            // Calculate offset for moving
+                            if (selectedShape.type === 'wall') {
+                                moveOffset.x = lastX - selectedShape.startX;
+                                moveOffset.y = lastY - selectedShape.startY;
+                            } else {
+                                moveOffset.x = lastX - selectedShape.startX;
+                                moveOffset.y = lastY - selectedShape.startY;
+                            }
+                            break;
+                        }
+                    }
+                    
+                    // If we clicked on a shape, start moving it
+                    if (selectedShape) {
+                        isMoving = true;
+                    }
+                    
+                    isDrawing = false;
+                    return;
+                }
+                
+                if (selectedTool === 'erase') {
+                    // Erase shape under cursor
+                    for (let i = shapes.length - 1; i >= 0; i--) {
+                        if (isPointInShape(lastX, lastY, shapes[i])) {
+                            saveState();
+                            shapes.splice(i, 1);
+                            redrawShapes();
+                            break;
+                        }
+                    }
+                    isDrawing = false;
+                    return;
+                }
+                
+                if (selectedTool !== 'select') {
+                    saveState();
+                    currentShape = {
+                        type: selectedTool,
+                        startX: lastX,
+                        startY: lastY,
+                        endX: lastX,
+                        endY: lastY,
+                        width: 0,
+                        height: 0,
+                        lineWidth: document.getElementById('line-width').value,
+                        strokeStyle: document.getElementById('line-color').value,
+                        fillStyle: document.getElementById('fill-color').value,
+                        opacity: document.getElementById('opacity').value / 100,
+                        rotation: 0
+                    };
+                }
+            }
+            
+            function draw(e) {
+                if (!isDrawing && !isMoving && !isRotating) {
+                    // Update cursor position
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left - offsetX) / scale;
+                    const y = (e.clientY - rect.top - offsetY) / scale;
+                    cursorPosition.textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+                    return;
+                }
+                
+                const rect = canvas.getBoundingClientRect();
+                const currentX = (e.clientX - rect.left - offsetX) / scale;
+                const currentY = (e.clientY - rect.top - offsetY) / scale;
+                
+                cursorPosition.textContent = `X: ${Math.round(currentX)}, Y: ${Math.round(currentY)}`;
+                
+                if (isMoving && selectedShape) {
+                    // Move the selected shape
+                    const deltaX = currentX - lastX;
+                    const deltaY = currentY - lastY;
+                    
+                    if (selectedShape.type === 'wall') {
+                        selectedShape.startX += deltaX;
+                        selectedShape.startY += deltaY;
+                        selectedShape.endX += deltaX;
+                        selectedShape.endY += deltaY;
+                    } else {
+                        selectedShape.startX += deltaX;
+                        selectedShape.startY += deltaY;
+                        
+                        // For shapes with width/height, we need to update end positions too
+                        if (selectedShape.endX !== undefined) {
+                            selectedShape.endX += deltaX;
+                            selectedShape.endY += deltaY;
+                        }
+                    }
+                    
+                    lastX = currentX;
+                    lastY = currentY;
+                    
+                    drawSelectionBox(selectedShape);
+                    redrawShapes();
+                    return;
+                }
+                
+                if (currentShape) {
+                    currentShape.endX = currentX;
+                    currentShape.endY = currentY;
+                    currentShape.width = currentX - currentShape.startX;
+                    currentShape.height = currentY - currentShape.startY;
+                    
+                    redrawShapes();
+                }
+            }
+            
+            function stopDrawing() {
+                if (isDrawing && currentShape) {
+                    shapes.push({...currentShape});
+                    currentShape = null;
+                    redrawShapes();
+                }
+                
+                if (isMoving) {
+                    saveState();
+                    isMoving = false;
+                }
+                
+                isDrawing = false;
+            }
+            
+            function startRotating(e) {
+                e.stopPropagation();
+                isRotating = true;
+                const rect = canvas.getBoundingClientRect();
+                lastX = (e.clientX - rect.left - offsetX) / scale;
+                lastY = (e.clientY - rect.top - offsetY) / scale;
+                
+                document.addEventListener('mousemove', rotateShape);
+                document.addEventListener('mouseup', stopRotating);
+            }
+            
+            function rotateShape(e) {
+                if (!isRotating || !selectedShape) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const currentX = (e.clientX - rect.left - offsetX) / scale;
+                const currentY = (e.clientY - rect.top - offsetY) / scale;
+                
+                const centerX = selectedShape.startX + (selectedShape.width || 0) / 2;
+                const centerY = selectedShape.startY + (selectedShape.height || 0) / 2;
+                
+                const prevAngle = Math.atan2(lastY - centerY, lastX - centerX);
+                const newAngle = Math.atan2(currentY - centerY, currentX - centerX);
+                
+                const rotationDelta = (newAngle - prevAngle) * 180 / Math.PI;
+                
+                selectedShape.rotation = (selectedShape.rotation || 0) + rotationDelta;
+                rotationInput.value = selectedShape.rotation;
+                
+                lastX = currentX;
+                lastY = currentY;
+                
+                redrawShapes();
+            }
+            
+            function stopRotating() {
+                isRotating = false;
+                saveState();
+                document.removeEventListener('mousemove', rotateShape);
+                document.removeEventListener('mouseup', stopRotating);
+            }
+            
+            function startMoving(e) {
+                e.stopPropagation();
+                isMoving = true;
+                const rect = canvas.getBoundingClientRect();
+                lastX = (e.clientX - rect.left - offsetX) / scale;
+                lastY = (e.clientY - rect.top - offsetY) / scale;
+                
+                document.addEventListener('mousemove', draw);
+                document.addEventListener('mouseup', stopMoving);
+            }
+            
+            function stopMoving() {
+                isMoving = false;
+                saveState();
+                document.removeEventListener('mousemove', draw);
+                document.removeEventListener('mouseup', stopMoving);
+            }
+            
+            // Add text functionality
+            addTextBtn.addEventListener('click', function() {
+                if (textInput.value.trim() !== '') {
+                    saveState();
+                    shapes.push({
+                        type: 'text',
+                        text: textInput.value,
+                        startX: textPosition.x,
+                        startY: textPosition.y,
+                        strokeStyle: document.getElementById('line-color').value,
+                        fontSize: document.getElementById('font-size').value
+                    });
+                    
+                    textInput.value = '';
+                    textInputContainer.style.display = 'none';
+                    redrawShapes();
+                }
+            });
+            
+            // Rotation input change
+            rotationInput.addEventListener('input', function() {
+                if (selectedShape) {
+                    selectedShape.rotation = parseInt(this.value);
+                    redrawShapes();
+                }
+            });
+            
+            // Property changes
+            document.getElementById('line-width').addEventListener('input', function() {
+                if (selectedShape) {
+                    selectedShape.lineWidth = this.value;
+                    redrawShapes();
+                }
+            });
+            
+            document.getElementById('line-color').addEventListener('input', function() {
+                if (selectedShape) {
+                    selectedShape.strokeStyle = this.value;
+                    redrawShapes();
+                }
+            });
+            
+            document.getElementById('fill-color').addEventListener('input', function() {
+                if (selectedShape) {
+                    selectedShape.fillStyle = this.value;
+                    redrawShapes();
+                }
+            });
+            
+            document.getElementById('opacity').addEventListener('input', function() {
+                if (selectedShape) {
+                    selectedShape.opacity = this.value / 100;
+                    redrawShapes();
+                }
+            });
+            
+            // Zoom controls
+            zoomInBtn.addEventListener('click', () => {
+                scale *= 1.1;
+                canvasScale.textContent = `Scale: ${Math.round(scale * 100)}%`;
+                redrawShapes();
+            });
+            
+            zoomOutBtn.addEventListener('click', () => {
+                scale /= 1.1;
+                canvasScale.textContent = `Scale: ${Math.round(scale * 100)}%`;
+                redrawShapes();
+            });
+            
+            resetViewBtn.addEventListener('click', () => {
+                scale = 1;
+                offsetX = 0;
+                offsetY = 0;
+                canvasScale.textContent = `Scale: ${Math.round(scale * 100)}%`;
+                redrawShapes();
+            });
+            
+            // Save and clear
+            saveBtn.addEventListener('click', () => {
+                const dataURL = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = 'floor-plan.png';
+                link.href = dataURL;
+                link.click();
+            });
+            
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear the canvas?')) {
+                    saveState();
+                    shapes = [];
+                    redrawShapes();
+                }
+            });
+            
+            // Undo/redo
+            undoBtn.addEventListener('click', undo);
+            redoBtn.addEventListener('click', redo);
+            
+            // Initialize the app
+            initCanvas();
+            window.addEventListener('resize', initCanvas);
+            
+            // Add initial state to history
+            saveState();
+        });
+    </script>
+</body>
+</html>
